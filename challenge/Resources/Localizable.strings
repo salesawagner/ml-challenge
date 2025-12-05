@@ -1,0 +1,42 @@
+/* 
+  Localizable.strings
+  challenge
+
+  Created by Wagner Sales on 05/12/25.
+  
+*/
+
+/* Buttons */
+"Button.login"="Login";
+"Button.retry"="Tentar novamente";
+
+"Icon.search"="magnifyingglass";
+"Icon.empty"="magnifyingglass";
+"Icon.error"="exclamationmark.triangle";
+
+"Login.title"="Login";
+
+"Search.title"="Faça sua busca";
+"Search.placeholder"="Buscar produtos";
+"Search.Feedback.error"="Necessário 3 characters";
+
+"List.title"="Produtos";
+"List.Feedback.empty.title"="Nenhum resultado encontrado";
+"List.Feedback.empty.message"="Não encontramos resultados";
+"List.Feedback.empty.message.query"="Não encontramos resultados para %@";
+"List.Feedback.empty.button.title"="Limpar busca";
+
+"List.Feedback.error.initialLoad.title"="Nenhum resultado encontrado";
+"List.Feedback.error.initialLoad.message"="Não encontramos resultados";
+
+"List.Feedback.error.search.title"="Nenhum resultado encontrado";
+"List.Feedback.error.search.message"="Não encontramos resultados";
+
+"List.Feedback.error.pagination.title"="Nenhum resultado encontrado";
+"List.Feedback.error.pagination.message"="Não encontramos resultados";
+
+"Detail.description.title"="Descrição";
+
+
+"Feedback.error.title"="Encontramos algum erro!";
+"Feedback.error.message"="Tivemos um problema ao carregar. Tente novamente.";

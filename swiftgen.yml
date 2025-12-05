@@ -1,0 +1,10 @@
+input_dir: challenge/
+output_dir: challenge/Resources/Generated/
+
+strings:
+  inputs: Resources/Localizable.strings
+  outputs:
+    - templateName: structured-swift5
+      output: Strings.swift
+      params:
+        enumName: Localized
