@@ -24,8 +24,7 @@ final class URLFactory: URLFactoryProtocol {
         guard
             let domainURL = environment.domainURL,
             let endpoint = URL(string: request.resourceName, relativeTo: domainURL),
-            var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: true) else
-        {
+            var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: true) else {
             Logger.log(
                 title: "❌ Invalid URL",
                 message: "Domain: \(environment.domainURL?.absoluteString ?? "nil"), Endpoint: \(request.resourceName)",

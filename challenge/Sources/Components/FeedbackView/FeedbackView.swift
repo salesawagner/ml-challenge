@@ -70,7 +70,7 @@ final class FeedbackView: UIView, FeedbackViewConfigurable {
     }()
 
     private var actionButton: UIButton = {
-        Buttons.create(style: .primary)
+        Buttons.create()
     }()
 
     // MARK: - Initialization

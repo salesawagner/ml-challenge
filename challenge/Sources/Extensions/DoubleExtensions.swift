@@ -13,9 +13,14 @@ extension Double {
         formatter.locale = Locale(identifier: "pt_BR")
         formatter.numberStyle = .currency
         formatter.currencySymbol = "R$"
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
 
-        return formatter.string(from: NSNumber(value: self)) ?? "R$ 0,00"
+        var formatted = (formatter.string(from: NSNumber(value: self)) ?? "R$ 0,00")
+        formatted = formatted.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Fixes Brazilian NumberFormatter non-breaking space (U+00A0) to normal space (ASCII 32)
+        // for XCTest equality - pt_BR locale inserts \u{00A0} automatically
+        formatted = formatted.replacingOccurrences(of: "\u{00A0}", with: " ")
+
+        return formatted
     }
 }

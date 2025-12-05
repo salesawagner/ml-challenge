@@ -33,8 +33,7 @@ extension APIRequest {
         guard
             let data = try? encoder.encode(self),
             !data.isEmpty,
-            let jsonString = String(data: data, encoding: .utf8) else
-        {
+            let jsonString = String(data: data, encoding: .utf8) else {
             return resourceName
         }
 

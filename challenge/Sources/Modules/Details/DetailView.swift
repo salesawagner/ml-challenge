@@ -195,7 +195,7 @@ extension DetailView: ViewCoding {
         scrollView.fill(on: self)
         contentView.fill(on: scrollView)
         contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor).isActive = true
-        feedbackView.heightAnchor.constraint(greaterThanOrEqualToConstant: Sizes.superHuge).isActive = true
+        feedbackView.heightAnchor.constraint(greaterThanOrEqualToConstant: Sizes.huge).isActive = true
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: contentView.topAnchor),

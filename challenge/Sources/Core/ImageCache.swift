@@ -20,6 +20,7 @@ final class ImageCache {
     }
 
     func setImage(_ image: UIImage, forKey key: String) {
-        cache.setObject(image, forKey: key as NSString)
+        let cost = image.jpegData(compressionQuality: 1.0)?.count ?? 0
+        cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 }

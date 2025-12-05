@@ -43,7 +43,7 @@ final class ResponseParser: ResponseParserProtocol {
         }
     }
 
-    private func decodeResponse<R: APIRequest>(_ request: R,  data: Data, statusCode: Int?) throws -> R.Response {
+    private func decodeResponse<R: APIRequest>(_ request: R, data: Data, statusCode: Int?) throws -> R.Response {
         do {
             let response = try jsonDecoder.decode(R.Response.self, from: data)
             logResponseData(request: request, data: data, statusCode: nil)
@@ -75,7 +75,7 @@ final class ResponseParser: ResponseParserProtocol {
         }
     }
 
-    private func parseErrorResponse<R: APIRequest>(_ request: R,  data: Data, statusCode: Int) -> APIError {
+    private func parseErrorResponse<R: APIRequest>(_ request: R, data: Data, statusCode: Int) -> APIError {
         do {
             let errorResponse = try jsonDecoder.decode(R.ErrorResponse.self, from: data)
             Logger.log(
@@ -114,8 +114,7 @@ extension Data {
         if
             let json = try? JSONSerialization.jsonObject(with: self, options: .fragmentsAllowed),
             let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
-            let prettyString = String(data: prettyData, encoding: .utf8)
-        {
+            let prettyString = String(data: prettyData, encoding: .utf8) {
             result = prettyString
         } else if let rawString = String(data: self, encoding: .utf8) {
             result = rawString

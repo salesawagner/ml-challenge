@@ -7,8 +7,10 @@
 
 import Foundation
 
+#if DEBUG
+/// Specific for debug
 extension Bundle {
-    func fileExists(resourceName: String, ofType ext: String? = "json") -> Bool {
+    private func fileExists(resourceName: String, ofType ext: String? = "json") -> Bool {
         url(forResource: resourceName, withExtension: ext) != nil
     }
 
@@ -20,3 +22,4 @@ extension Bundle {
         return url(forResource: resourceName, withExtension: ext, subdirectory: nil)
     }
 }
+#endif

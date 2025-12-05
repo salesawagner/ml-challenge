@@ -76,7 +76,7 @@ final class ListViewModel {
 
     private let userId: Int
     private let apiClient: APIClientProtocol
-    private let paginationManager: ListPaginationManagerProtocol
+    private let paginationManager: PaginationManagerProtocol
 
     private let stateLock = NSLock()
 
@@ -133,7 +133,7 @@ final class ListViewModel {
         userId: Int,
         query: String,
         apiClient: APIClientProtocol = DependencyContainer.shared.apiClient,
-        paginationManager: ListPaginationManagerProtocol = ListPaginationManager()
+        paginationManager: PaginationManagerProtocol = PaginationManager()
     ) {
         self.userId = userId
         self.query = query

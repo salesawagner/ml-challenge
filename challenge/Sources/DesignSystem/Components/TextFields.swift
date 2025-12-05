@@ -10,12 +10,10 @@ import UIKit
 struct TextFields {
     enum Style {
         case standard
-        case outlined
         case search
 
         var borderStyle: UITextField.BorderStyle {
             switch self {
-            case .outlined: return .roundedRect
             case .search: return .roundedRect
             default: return .none
             }
@@ -24,7 +22,7 @@ struct TextFields {
         var backgroundColor: UIColor {
             switch self {
             case .standard: return Colors.surface
-            case .outlined, .search: return .clear
+            case .search: return .clear
             }
         }
 
@@ -42,16 +40,10 @@ struct TextFields {
         // Typography
         textField.font = Typography.body
 
-        // Border
-        if style == .outlined {
-            textField.layer.borderColor = style.borderColor.cgColor
-            textField.layer.borderWidth = 1.5
-            textField.layer.cornerRadius = Corners.base
-        }
-
         textField.setAppleHIGAutoLayout()
         textField.clearButtonMode = .whileEditing
-        textField.returnKeyType = .done
+        textField.returnKeyType = style == .search ? .search : .done
+        textField.autocorrectionType = style == .search ? .no : .yes
         textField.applyShadow(elevation: .level1)
 
         return textField

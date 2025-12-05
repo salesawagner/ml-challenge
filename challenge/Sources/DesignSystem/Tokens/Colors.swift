@@ -13,9 +13,6 @@ struct Colors {
     /// Primary action color - Main CTAs, buttons, accents
     static let primary = UIColor(named: "PrimaryColor") ?? UIColor.systemBlue
 
-    /// Secondary actions - Secondary CTAs, subtle highlights
-    static let secondary = UIColor(named: "SecondaryColor") ?? UIColor.systemTeal
-
     /// Main backgrounds - Screens, main containers
     static let background = UIColor(named: "BackgroundColor") ?? UIColor.systemBackground
 
@@ -29,9 +26,6 @@ struct Colors {
 
     /// Text/icons on primary backgrounds
     static let onPrimary = UIColor(named: "OnPrimaryColor") ?? UIColor.white
-
-    /// Text/icons on secondary backgrounds
-    static let onSecondary = UIColor(named: "OnSecondaryColor") ?? UIColor.label
 
     /// Main content text/icons
     static let onBackground = UIColor(named: "OnBackgroundColor") ?? UIColor.label
@@ -47,9 +41,6 @@ struct Colors {
     /// Subtle borders, dividers
     static let outline = UIColor(named: "OutlineColor") ?? UIColor.separator
 
-    /// Focused states, subtle highlights
-    static let outlineVariant = UIColor(named: "OutlineVariantColor") ?? UIColor.tertiarySystemFill
-
     /// Shadow color for elevated surfaces
     static let shadow = UIColor(named: "ShadowColor") ?? UIColor.black
 }
@@ -60,21 +51,6 @@ extension Colors {
     enum OpacityLevel: CGFloat {
         /// Almost invisible - 4%
         case ghost = 0.04
-
-        /// Very subtle - 8%
-        case subtle = 0.08
-
-        /// Low visibility - 12%
-        case low = 0.12
-
-        /// Moderate visibility - 16%
-        case moderate = 0.16
-
-        /// Medium visibility - 24%
-        case medium = 0.24
-
-        /// Standard visibility - 38%
-        case regular = 0.38
 
         /// High visibility - 54%
         case high = 0.54
@@ -97,8 +73,4 @@ extension Colors {
     static func withOpacity(_ color: UIColor, opacity: OpacityLevel) -> UIColor {
         return color.withAlphaComponent(opacity.rawValue)
     }
-
-    static var primaryButton: UIColor { primary }
-    static var secondaryButton: UIColor { secondary }
-    static var destructiveButton: UIColor { error }
 }

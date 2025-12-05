@@ -29,7 +29,7 @@ final class LoginView: UIView {
     // MARK: - UI Components
 
     let actionButton: UIButton = {
-        Buttons.create(style: .primary, title: Localized.Button.login)
+        Buttons.create(title: Localized.Button.login)
     }()
 
     // MARK: - Initialization

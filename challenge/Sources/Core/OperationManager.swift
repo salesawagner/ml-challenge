@@ -13,16 +13,16 @@ protocol OperationManagerProtocol {
 
 final class OperationManager {
     // MARK: - Properties
-    
+
     private var currentTask: Task<Void, Never>?
     private let delay: Duration
-    
+
     // MARK: - Initialization
-    
+
     init(delay: Duration = .milliseconds(300)) {
         self.delay = delay
     }
-    
+
     deinit {
         cancel()
     }

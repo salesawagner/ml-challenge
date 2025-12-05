@@ -55,12 +55,7 @@ final class SearchView: UIView {
     }()
 
     let textField: UITextField = {
-        let textField = TextFields.create(style: .search, placeholder: Localized.Search.placeholder)
-        textField.autocorrectionType = .no
-        textField.returnKeyType = .search
-        textField.clearButtonMode = .whileEditing
-
-        return textField
+        TextFields.create(style: .search, placeholder: Localized.Search.placeholder)
     }()
 
     var textFieldIconView: UIView = {

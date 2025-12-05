@@ -7,7 +7,7 @@
 
 import UIKit
 
-protocol Navigable where Self: UIViewController  {
+protocol Navigable where Self: UIViewController {
     func navigateToLogin()
 }
 

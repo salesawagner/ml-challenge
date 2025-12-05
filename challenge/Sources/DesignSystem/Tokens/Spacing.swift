@@ -22,7 +22,4 @@ struct Spacing {
 
     /// 8x scale: Section spacing, group dividers
     static let extraLarge: CGFloat = Scale.base * 8
-
-    /// 16x scale: Page/screen major sections
-    static let doubleExtraLarge: CGFloat = Scale.base * 16
 }

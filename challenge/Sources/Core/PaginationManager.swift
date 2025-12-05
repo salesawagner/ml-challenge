@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ListPaginationInfo {
+struct PaginationInfo {
     let offset: Int
     let limit: Int
     let total: Int
@@ -22,18 +22,18 @@ struct ListPaginationInfo {
     }
 }
 
-protocol ListPaginationManagerProtocol {
+protocol PaginationManagerProtocol {
     var offset: Int { get }
     var limit: Int { get }
     var total: Int { get }
     var canLoadMore: Bool { get }
-    var info: ListPaginationInfo { get }
+    var info: PaginationInfo { get }
     func updateTotal(_ total: Int)
     func nextPage()
     func reset()
 }
 
-final class ListPaginationManager: ListPaginationManagerProtocol {
+final class PaginationManager: PaginationManagerProtocol {
     // MARK: - Properties
 
     private let initialOffset: Int
@@ -53,8 +53,8 @@ final class ListPaginationManager: ListPaginationManagerProtocol {
         return offset < total
     }
 
-    var info: ListPaginationInfo {
-        ListPaginationInfo(offset: offset, limit: limit, total: total)
+    var info: PaginationInfo {
+        PaginationInfo(offset: offset, limit: limit, total: total)
     }
 
     // MARK: - Initialization
