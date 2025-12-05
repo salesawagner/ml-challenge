@@ -1,0 +1,75 @@
+name: challenge
+
+options:
+  xcodeVersion: "17.0"
+  createIntermediateGroups: true
+  
+deploymentTarget:
+  iOS: "17.0"
+
+configs:
+  DebugLocal: debug
+  DebugProduction: debug
+  Release: release
+
+configFiles:
+  DebugLocal: Configurations/Local.xcconfig
+  DebugProduction: Configurations/Production.xcconfig
+
+targets:
+  challenge:
+    platform: iOS
+    type: application
+    deploymentTarget: "17.0"
+    sources: [challenge]
+
+    settings:
+      INFOPLIST_FILE: challenge/Resources/Info.plist
+
+  challengeTests:
+    platform: iOS
+    type: bundle.unit-test
+
+    sources:
+      - path: challengeTests
+
+    dependencies:
+      - target: challenge
+      - sdk: SwiftUI.framework
+
+schemes:
+  challenge-local:
+    build:
+      parallelizeBuild: true
+      buildImplicitDependencies: true
+      targets:
+        challenge: [run, test]
+
+    run:
+      config: DebugLocal
+
+    test:
+      config: DebugLocal
+      gatherCoverageData: true
+      coverageTargets:
+        - challenge
+      targets:
+        - challengeTests
+
+  challenge-production:
+    build:
+      parallelizeBuild: true
+      buildImplicitDependencies: true
+      targets:
+        challenge: [run, test]
+    
+    run:
+      config: DebugProduction
+    
+    test:
+      config: DebugProduction
+      gatherCoverageData: true
+      coverageTargets:
+        - challenge
+      targets:
+        - challengeTests

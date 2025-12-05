@@ -1,0 +1,140 @@
+{
+    "seller_id": "3025335088",
+    "results": [
+        "MLB4337071137",
+        "MLB5988311196",
+        "MLB5988298904",
+        "MLB5988260890",
+        "MLB5988145262",
+        "MLB5988107664",
+        "MLB5988020310",
+        "MLB5987970622",
+        "MLB5988388356",
+        "MLB5988388352",
+        "MLB5988388342",
+        "MLB5988388336",
+        "MLB5988388328",
+        "MLB5988388320",
+        "MLB5988388034",
+        "MLB5988311802",
+        "MLB5988311794",
+        "MLB5988311774",
+        "MLB5988311766",
+        "MLB5988311474",
+        "MLB5988299560",
+        "MLB5988299548",
+        "MLB5988299522",
+        "MLB5988299518",
+        "MLB5988299142",
+        "MLB5988261996",
+        "MLB5988261970",
+        "MLB5988261960",
+        "MLB5988261958",
+        "MLB5988261954",
+        "MLB5988261950",
+        "MLB5988249586",
+        "MLB5988249576",
+        "MLB5988249572",
+        "MLB5988249566",
+        "MLB5988249564",
+        "MLB5988249554",
+        "MLB5988249548",
+        "MLB5988249544",
+        "MLB5988249208",
+        "MLB5988249204",
+        "MLB5988145838",
+        "MLB5988145832",
+        "MLB5988145522",
+        "MLB5988145520",
+        "MLB5988108434",
+        "MLB5988108422",
+        "MLB5988108404",
+        "MLB5988084754",
+        "MLB5988084750",
+        "MLB5988084746"
+    ],
+    "paging": {
+        "limit": 50,
+        "offset": 0,
+        "total": 118
+    },
+    "query": null,
+    "orders": [
+        {
+            "id": "stop_time_asc",
+            "name": "Order by stop time ascending"
+        }
+    ],
+    "available_orders": [
+        {
+            "id": "stop_time_asc",
+            "name": "Order by stop time ascending"
+        },
+        {
+            "id": "stop_time_desc",
+            "name": "Order by stop time descending"
+        },
+        {
+            "id": "start_time_asc",
+            "name": "Order by start time ascending"
+        },
+        {
+            "id": "start_time_desc",
+            "name": "Order by start time descending"
+        },
+        {
+            "id": "available_quantity_asc",
+            "name": "Order by available quantity ascending"
+        },
+        {
+            "id": "available_quantity_desc",
+            "name": "Order by available quantity descending"
+        },
+        {
+            "id": "sold_quantity_asc",
+            "name": "Order by sold quantity ascending"
+        },
+        {
+            "id": "sold_quantity_desc",
+            "name": "Order by sold quantity descending"
+        },
+        {
+            "id": "price_asc",
+            "name": "Order by price ascending"
+        },
+        {
+            "id": "price_desc",
+            "name": "Order by price descending"
+        },
+        {
+            "id": "last_updated_desc",
+            "name": "Order by lastUpdated descending"
+        },
+        {
+            "id": "last_updated_asc",
+            "name": "Order by last updated ascending"
+        },
+        {
+            "id": "total_sold_quantity_asc",
+            "name": "Order by total sold quantity ascending"
+        },
+        {
+            "id": {
+                "id": "total_sold_quantity_desc",
+                "field": "sold_quantity",
+                "missing": "_last",
+                "order": "desc"
+            },
+            "name": "Order by total sold quantity descending"
+        },
+        {
+            "id": {
+                "id": "inventory_id_asc",
+                "field": "inventory_id",
+                "missing": "_last",
+                "order": "asc"
+            },
+            "name": "Order by inventory id ascending"
+        }
+    ]
+}
