@@ -32,7 +32,7 @@ final class ResponseParser: ResponseParserProtocol {
 
     private func parseLocalFile<R: APIRequest>(_ request: R, _ data: Data) throws -> R.Response {
         #if DEBUG
-        logResponseData(data, statusCode: nil)
+        logResponseData(request: request, data: data, statusCode: nil)
         #endif
 
         do {
@@ -46,7 +46,7 @@ final class ResponseParser: ResponseParserProtocol {
     private func decodeResponse<R: APIRequest>(_ request: R,  data: Data, statusCode: Int?) throws -> R.Response {
         do {
             let response = try jsonDecoder.decode(R.Response.self, from: data)
-            logResponseData(data, statusCode: statusCode)
+            logResponseData(request: request, data: data, statusCode: nil)
 
             return response
 
@@ -78,25 +78,49 @@ final class ResponseParser: ResponseParserProtocol {
     private func parseErrorResponse<R: APIRequest>(_ request: R,  data: Data, statusCode: Int) -> APIError {
         do {
             let errorResponse = try jsonDecoder.decode(R.ErrorResponse.self, from: data)
-            Logger.log(title: "📥 API Error \(request.toJSON)", message: errorResponse.message, type: .error)
+            Logger.log(
+                title: "📥 API Error \(request.resourceName)",
+                message: "request: \(request.toJSON) \n message: \(errorResponse.message)",
+                type: .error
+            )
             return APIError.apiError(errorResponse, statusCode: statusCode)
         } catch {
-            Logger.log(title: "📥 HTTP Error: \(request.toJSON)", message: "Status: \(statusCode)", type: .error)
+            Logger.log(
+                title: "📥 HTTP Error: \(request.resourceName)",
+                message: "request: \(request.toJSON) \n message: \(error.localizedDescription)",
+                type: .error
+            )
             return APIError.httpError(statusCode: statusCode)
         }
     }
 
     #if DEBUG
-    private func logResponseData(_ data: Data, statusCode: Int?) {
-        if
-            let json = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
-            let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
-            let prettyString = String(data: prettyData, encoding: .utf8)
-        {
-            Logger.log(title: "📥 API Response (\(statusCode ?? .zero)):", message: String(prettyString.prefix(30)))
-        } else if let rawString = String(data: data, encoding: .utf8) {
-            Logger.log(title: "📥 API Response (\(statusCode ?? .zero)):", message: rawString)
+    private func logResponseData(request: any APIRequest, data: Data, statusCode: Int?, isVerbose: Bool = false) {
+        let title = "📥 Response: \(request.resourceName)  statusCode: \(statusCode ?? .zero)"
+
+        if isVerbose {
+            Logger.log(title: title, message: data.toJSON)
+        } else {
+            Logger.log(title: title)
         }
     }
     #endif
+}
+
+extension Data {
+    var toJSON: String {
+        var result: String = "{ }"
+
+        if
+            let json = try? JSONSerialization.jsonObject(with: self, options: .fragmentsAllowed),
+            let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+            let prettyString = String(data: prettyData, encoding: .utf8)
+        {
+            result = prettyString
+        } else if let rawString = String(data: self, encoding: .utf8) {
+            result = rawString
+        }
+
+        return result
+    }
 }

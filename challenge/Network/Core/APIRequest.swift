@@ -39,7 +39,6 @@ extension APIRequest {
         }
 
         return jsonString
-
     }
 
     func getAuthorizationHeader(accessToken: String? = nil) -> [String: String] {

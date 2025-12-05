@@ -11,17 +11,21 @@ final class DetailViewController: UIViewController {
     // MARK: - Properties
 
     private var viewModel: DetailViewModelProtocol
-    private let contentView: DetailViewContent
-    private var currentTask: Task<Void, Never>?
-    private var currentPage: Int = .zero
+    private var contentView: DetailViewContent
+    private let operationManager: OperationManager
 
     // MARK: - Initialization
 
-    init(viewModel: DetailViewModelProtocol, contentView: DetailViewContent = DetailView()) {
+    init(
+        viewModel: DetailViewModelProtocol,
+        contentView: DetailViewContent = DetailView(),
+        operationManager: OperationManager = OperationManager()
+    ) {
         self.viewModel = viewModel
         self.contentView = contentView
-        super.init(nibName: nil, bundle: nil)
+        self.operationManager = operationManager
 
+        super.init(nibName: nil, bundle: nil)
         setupViewModel()
     }
 
@@ -31,8 +35,9 @@ final class DetailViewController: UIViewController {
     }
 
     deinit {
-        currentTask?.cancel()
-        viewModel.didChangeState = nil
+        operationManager.cancel()
+        viewModel.didChangeContentState = nil
+        viewModel.didChangeDescriptionState = nil
     }
 
     // MARK: - Lifecycle
@@ -43,52 +48,42 @@ final class DetailViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        performInitialLoad()
+    }
 
-        currentTask = Task {
-            await viewModel.viewDidLoad()
+    private func performInitialLoad() {
+        operationManager.performImmediate { [weak self] in
+            await self?.viewModel.viewDidLoad()
         }
     }
 
     // MARK: - Setups
 
     private func setupViewModel() {
-        viewModel.didChangeState = { [weak self] state in
+        viewModel.didChangeContentState = { [weak self] state in
             DispatchQueue.main.async {
-                self?.handleStateChange(state)
+                self?.handleContentStateChange(state)
+            }
+        }
+
+        viewModel.didChangeDescriptionState = { [weak self] state in
+            DispatchQueue.main.async {
+                self?.handleDescriptionStateChange(state)
             }
         }
     }
-
-    private func setupContentView() {
-        contentView.delegate = self
-    }
 }
 
-// MARK: - Handlers
+// MARK: - Content Handlers
 
 extension DetailViewController {
-    private func handleStateChange(_ state: DetailState) {
+    private func handleContentStateChange(_ state: DetailContentState) {
         switch state {
         case .idle:
             handleIdleState()
 
         case .displayingItem(let item):
-            handleInitializing(item)
-
-        case .loading:
-            handleLoadingState()
-
-        case .success(let item):
-            handleSuccessState(item)
-
-        case .failure:
-            handleFailureState()
-
-        case .unauthorized:
-            handleUnauthorized()
-
-        case .descriptionError(displayModel: let displayModel):
-            handleDescriptionErrorState(displayModel)
+            handleDisplayItem(item)
         }
     }
 
@@ -96,8 +91,35 @@ extension DetailViewController {
         contentView.hideLoading()
     }
 
-    private func handleInitializing(_ item: ItemResponse) {
-        contentView.configureItem(with: item)
+    private func handleDisplayItem(_ item: ItemResponse) {
+        let displayModel = DetailViewDisplayModel.from(item)
+        contentView.renderContentItem(displayModel)
+    }
+}
+
+// MARK: - Handlers
+
+extension DetailViewController {
+    private func handleDescriptionStateChange(_ state: DetailDescriptionState) {
+        switch state {
+        case .idle:
+            handleIdleState()
+
+        case .loading:
+            handleLoadingState()
+
+        case .success(let description):
+            handleSuccessState(description)
+
+        case .unauthorized:
+            handleUnauthorizedState()
+
+        case .descriptionError(let displayModel):
+            handleDescriptionErrorState(displayModel)
+
+        case .retry:
+            handleRetryState()
+        }
     }
 
     private func handleLoadingState() {
@@ -105,29 +127,22 @@ extension DetailViewController {
     }
 
     private func handleSuccessState(_ description: ItemDescriptionResponse) {
-        contentView.configureDescription(with: description)
+        contentView.renderDescriptionItem(description.plainText)
         contentView.hideLoading()
     }
 
-    private func handleFailureState() {
-        navigationController?.popToRootViewController(animated: true)
-    }
-
     private func handleDescriptionErrorState(_ displayModel: FeedbackViewDisplayModel) {
-        contentView.showDescriptionError(with: displayModel)
+        contentView.showEmptyState(with: displayModel)
+        contentView.hideLoading()
     }
 
-    private func handleUnauthorized() {
+    private func handleUnauthorizedState() {
         navigationController?.popToRootViewController(animated: true)
     }
-}
 
-// MARK: - DetailViewDelegate
-
-extension DetailViewController: DetailViewDelegate {
-    func retryButtonTapped() {
-        currentTask = Task {
-            await viewModel.fetchDescription()
+    private func handleRetryState() {
+        operationManager.performImmediate { [weak self] in
+            await self?.viewModel.fetchDescription()
         }
     }
 }

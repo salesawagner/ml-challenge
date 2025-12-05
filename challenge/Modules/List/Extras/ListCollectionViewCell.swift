@@ -82,10 +82,10 @@ final class ListCollectionViewCell: UICollectionViewCell, ReusableView {
 
     // MARK: - Configuration
 
-    func configure(title: String, price: String, imageURL: String? = nil) {
-        titleLabel.text = title
-        priceLabel.text = price
-        imageView.loadImage(from: imageURL)
+    func configure(displayModel: ListItemDisplayModel) {
+        titleLabel.text = displayModel.title
+        priceLabel.text = displayModel.price
+        imageView.loadImage(from: displayModel.imageURL)
     }
 }
 

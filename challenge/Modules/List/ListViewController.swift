@@ -11,13 +11,15 @@ final class ListViewController: UIViewController {
     // MARK: - Properties
 
     private var viewModel: ListViewModelProtocol
-    private let contentView: ListViewContent
-    private let listDebouncer = Debouncer()
-    private let searchDebouncer = Debouncer(delay: .milliseconds(300))
+    private var contentView: ListViewContent
+    private let operationManager: OperationManager
+    private var displayItems: [ListItemDisplayModel] = []
 
     private var query: String {
         viewModel.query
     }
+
+    // MARK: - UI Components
 
     private let searchController = {
         let searchController = UISearchController(searchResultsController: nil)
@@ -28,11 +30,16 @@ final class ListViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(viewModel: ListViewModelProtocol, contentView: ListViewContent = ListView()) {
+    init(
+        viewModel: ListViewModelProtocol,
+        contentView: ListViewContent = ListView(),
+        operationManager: OperationManager = OperationManager()
+    ) {
         self.viewModel = viewModel
         self.contentView = contentView
-        super.init(nibName: nil, bundle: nil)
+        self.operationManager = operationManager
 
+        super.init(nibName: nil, bundle: nil)
         setupViewModel()
     }
 
@@ -42,8 +49,7 @@ final class ListViewController: UIViewController {
     }
 
     deinit {
-        listDebouncer.cancel()
-        searchDebouncer.cancel()
+        operationManager.cancel()
         viewModel.didChangeState = nil
     }
 
@@ -55,32 +61,35 @@ final class ListViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupViewController()
-        setupSearchController()
-
-        listDebouncer.debounce { [weak self] in
-            await self?.viewModel.viewDidLoad()
-        }
+        setups()
+        performInitialLoad()
     }
 
     // MARK: - Setups
 
+    private func setups() {
+        setupViewController()
+        setupSearchController()
+        setupContentView()
+    }
+
     private func setupViewModel() {
         viewModel.didChangeState = { [weak self] state in
-            self?.handleStateChange(state)
+            DispatchQueue.main.async {
+                self?.handleStateChange(state)
+            }
         }
     }
 
     private func setupViewController() {
         title = "Produtos"
-        contentView.delegate = self
+        navigationItem.largeTitleDisplayMode = .automatic
     }
 
     private func setupSearchController() {
         searchController.searchBar.text = query
         searchController.searchResultsUpdater = self
-        searchController.obscuresBackgroundDuringPresentation = false
-        searchController.searchBar.placeholder = "Buscar produtos"
+        searchController.searchBar.placeholder = "Buscar produtos" // FIXME: Localizar
 
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
@@ -88,18 +97,64 @@ final class ListViewController: UIViewController {
         definesPresentationContext = true
     }
 
+    private func setupContentView() {
+        contentView.delegate = self
+        contentView.dataSource = self
+    }
+
     // MARK: - Private Methods
 
-    private func fetch(query: String? = nil) {
+    private func performInitialLoad() {
+        operationManager.performImmediate { [weak self] in
+            await self?.viewModel.viewDidLoad()
+        }
+    }
+
+    private func performSearch(with query: String) {
         contentView.scrollToTop(animated: true)
-        listDebouncer.debounce { [weak self] in
-            await self?.viewModel.filter(query: query ?? "")
+
+        operationManager.performDelay { [weak self] in
+            await self?.viewModel.filter(query: query)
+        }
+    }
+
+    private func performPagination() {
+        operationManager.performImmediate { [weak self] in
+            await self?.viewModel.paginate()
         }
     }
 
     private func clearSearch() {
         searchController.searchBar.text = ""
         searchController.searchBar.resignFirstResponder()
+        searchController.isActive = false
+    }
+
+    private func convertToDisplayModels(_ items: [ItemResponse]) -> [ListItemDisplayModel] {
+        items.map(ListItemDisplayModel.from)
+    }
+
+    private func updateDisplayItems(with items: [ItemResponse], append: Bool) {
+        let newDisplayItems = convertToDisplayModels(items)
+
+        if append {
+            displayItems.append(contentsOf: newDisplayItems)
+            contentView.appendItems(newDisplayItems)
+        } else {
+            displayItems = newDisplayItems
+            contentView.renderItems(newDisplayItems)
+        }
+    }
+
+    private func clearDisplayItems() {
+        displayItems.removeAll()
+        contentView.clearItems()
+    }
+
+    private func navigateToDetail(with item: ItemResponse) {
+        let detailViewModel = DetailViewModel(itemResponse: item)
+        let detailViewController = DetailViewController(viewModel: detailViewModel)
+        navigationController?.pushViewController(detailViewController, animated: true)
     }
 }
 
@@ -121,19 +176,19 @@ extension ListViewController {
             handleSuccessState(itens)
 
         case .paginationSuccess(let items):
-            handleAppendState(items)
+            handlePaginationSuccessState(items)
 
         case .failure(let displayModel):
             handleFailureState(displayModel: displayModel)
 
         case .unauthorized:
-            handleUnauthorized()
+            handleUnauthorizedState()
 
         case .refresh:
-            handleRefresh()
+            handleRefreshState()
 
         case .retry:
-            handleRetry()
+            handleRetryState()
         }
     }
 
@@ -145,19 +200,20 @@ extension ListViewController {
         contentView.showLoading()
     }
 
-    private func handleEmptyState(displayModel: EmptyStateViewDisplayModel) {
-        contentView.setItems([])
+    private func handleEmptyState(displayModel: FeedbackViewDisplayModel) {
+        clearDisplayItems()
         contentView.showEmptyState(with: displayModel)
         contentView.hideLoading()
     }
 
     private func handleSuccessState(_ items: [ItemResponse]) {
-        contentView.setItems(items)
+        updateDisplayItems(with: items, append: false)
+        contentView.hideEmptyState()
         contentView.hideLoading()
     }
 
-    private func handleAppendState(_ items: [ItemResponse]) {
-        contentView.appendItems(items)
+    private func handlePaginationSuccessState(_ items: [ItemResponse]) {
+        updateDisplayItems(with: items, append: true)
         contentView.hideLoading()
     }
 
@@ -168,36 +224,54 @@ extension ListViewController {
         present(errorViewController, animated: true)
     }
 
-    private func handleUnauthorized() {
+    private func handleUnauthorizedState() {
+        clearDisplayItems()
         navigationController?.popToRootViewController(animated: true)
     }
 
-    private func handleRefresh() {
+    private func handleRefreshState() {
         clearSearch()
     }
 
-    private func handleRetry() {
-        fetch(query: viewModel.query)
+    private func handleRetryState() {
+        performSearch(with: viewModel.query)
+    }
+}
+
+// MARK: - ListViewDataSource
+
+extension ListViewController: ListViewDataSource {
+    var numberOfItems: Int {
+        displayItems.count
+    }
+
+    func item(at index: Int) -> ListItemDisplayModel? {
+        guard displayItems.indices.contains(index) else {
+            return nil
+        }
+
+        return displayItems[index]
     }
 }
 
 // MARK: - ListViewDelegate
 
 extension ListViewController: ListViewDelegate {
-    func listCollectionView(_ collectionView: ListView, didSelectItemAt index: Int) {
+    func listViewDidSelectItem(at index: Int) {
         guard let itemResponse = viewModel.getItem(at: index) else {
+            Logger.log(
+                title: "ListViewController",
+                message: "Item not found at index: \(index)",
+                type: .error
+            )
             return
         }
 
-        let detailViewModel = DetailViewModel(itemResponse: itemResponse)
-        let detailViewController = DetailViewController(viewModel: detailViewModel)
-        navigationController?.pushViewController(detailViewController, animated: true)
+        navigateToDetail(with: itemResponse)
     }
 
-    func listCollectionViewDidReachEnd(_ collectionView: ListView) {
-        listDebouncer.debounce { [weak self] in
-            await self?.viewModel.paginate()
-        }
+    func listViewDidReachEnd() {
+        performPagination()
     }
 }
 
@@ -206,8 +280,10 @@ extension ListViewController: ListViewDelegate {
 extension ListViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         let query = searchController.searchBar.text ?? ""
-        searchDebouncer.debounce { [weak self] in
+
+        operationManager.performDelay { [weak self] in
             await self?.viewModel.filter(query: query)
+            self?.contentView.scrollToTop(animated: true)
         }
     }
 }

@@ -7,28 +7,18 @@
 
 import UIKit
 
+protocol DetailDataRenderable: AnyObject {
+    func renderContentItem(_ displayViewModel: DetailViewDisplayModel)
+    func renderDescriptionItem(_ text: String)
+}
+
+typealias DetailViewProtocol = DetailDataRenderable & Loadable & FeedbackViewShowable
 typealias DetailViewContent = UIView & DetailViewProtocol
-
-protocol DetailViewProtocol: AnyObject {
-    var delegate: DetailViewDelegate? { get set }
-    var collectionView: UICollectionView { get }
-
-    func configureItem(with item: ItemResponse)
-    func configureDescription(with description: ItemDescriptionResponse)
-    func showLoading()
-    func hideLoading()
-    func showDescriptionError(with displayModel: FeedbackViewDisplayModel)
-}
-
-protocol DetailViewDelegate: AnyObject {
-    func retryButtonTapped()
-}
 
 final class DetailView: UIView {
     // MARK: - Properties
 
-    weak var delegate: DetailViewDelegate?
-    private var pictures: [ItemPicture] = [] {
+    private var pictures: [String] = [] {
         didSet {
             collectionView.reloadData()
             pageControl.numberOfPages = pictures.count
@@ -130,7 +120,7 @@ final class DetailView: UIView {
         return loadingIndicator
     }()
 
-    private let feedbackView: FeedbackViewContent = {
+    private let feedbackView: FeedbackView = {
         let feedbackView = FeedbackView()
         feedbackView.translatesAutoresizingMaskIntoConstraints = false
         feedbackView.isHidden = true
@@ -180,10 +170,6 @@ extension DetailView: ViewCoding {
             DetailCollectionViewCell.self,
             forCellWithReuseIdentifier: DetailCollectionViewCell.reuseIdentifier
         )
-
-        feedbackView.action = { [weak self] in
-            self?.delegate?.retryButtonTapped()
-        }
     }
 
     func buildHierarchy() {
@@ -238,39 +224,56 @@ extension DetailView: ViewCoding {
     }
 }
 
-// MARK: - DetailViewProtocol
+// MARK: - DetailDataRenderable
 
-extension DetailView: DetailViewProtocol {
-    func configureItem(with item: ItemResponse) {
-        pictures = item.pictures
-        titleLabel.text = item.title
-        priceLabel.text = item.priceFormatted
+extension DetailView: DetailDataRenderable {
+    func renderContentItem(_ displayViewModel: DetailViewDisplayModel) {
+        titleLabel.text = displayViewModel.title
+        priceLabel.text = displayViewModel.price
+        pictures = displayViewModel.pictures
 
         let bottom = safeAreaInsets.bottom + Spacing.medium
         scrollView.contentInset = UIEdgeInsets(top: .zero, left: .zero, bottom: bottom, right: .zero)
     }
 
-    func configureDescription(with description: ItemDescriptionResponse) {
-        descriptionLabel.text = description.plainText
+    func renderDescriptionItem(_ text: String) {
+        descriptionLabel.text = text
+        showDescription()
     }
+}
 
+// MARK: - Loadable
+
+extension DetailView: Loadable {
     func showLoading() {
         loadingIndicator.startAnimating()
-        animateDescriptionLabel(isShow: false)
-        animateFeedbackView(isShow: false)
+        hideDescription()
+        hideEmptyState()
     }
 
     func hideLoading() {
         loadingIndicator.stopAnimating()
+    }
+}
+
+// MARK: - FeedbackViewShowable
+
+extension DetailView: FeedbackViewShowable {
+    func showEmptyState(with displayModel: FeedbackViewDisplayModel) {
+        feedbackView.configure(with: displayModel)
+        animateFeedbackView(isShow: true)
+    }
+
+    func hideEmptyState() {
+        animateFeedbackView(isShow: false)
+    }
+
+    func showDescription() {
         animateDescriptionLabel(isShow: true)
     }
 
-    func showDescriptionError(with displayModel: FeedbackViewDisplayModel) {
-        loadingIndicator.stopAnimating()
+    func hideDescription() {
         animateDescriptionLabel(isShow: false)
-
-        feedbackView.configure(with: displayModel)
-        animateFeedbackView(isShow: true)
     }
 }
 
@@ -302,8 +305,8 @@ extension DetailView: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
 
-        let picture = pictures[indexPath.item]
-        cell.configure(imageURL: picture.url)
+        let imageURL = pictures[indexPath.item]
+        cell.configure(imageURL: imageURL)
 
         return cell
     }

@@ -7,37 +7,40 @@
 
 import UIKit
 
+protocol ListViewDelegate: AnyObject {
+    func listViewDidSelectItem(at index: Int)
+    func listViewDidReachEnd()
+}
+
+protocol ListDataRenderable: AnyObject {
+    func renderItems(_ items: [ListItemDisplayModel])
+    func appendItems(_ items: [ListItemDisplayModel])
+    func clearItems()
+}
+
+protocol ListViewDataSource: AnyObject {
+    var numberOfItems: Int { get }
+    func item(at index: Int) -> ListItemDisplayModel?
+}
+
+protocol ListViewConfigurable {
+    var delegate: ListViewDelegate? { get set }
+    var dataSource: ListViewDataSource? { get set }
+}
+
+typealias ListViewProtocol = Loadable & FeedbackViewShowable & ScrollableToTop & ListDataRenderable & ListViewConfigurable
 typealias ListViewContent = UIView & ListViewProtocol
 
-protocol ListViewProtocol: AnyObject {
-    var delegate: ListViewDelegate? { get set }
-
-    func setItems(_ newItems: [ItemResponse])
-    func appendItems(_ newItems: [ItemResponse])
-    func showLoading()
-    func hideLoading()
-    func showEmptyState(with displayModel: EmptyStateViewDisplayModel)
-    func clear()
-    func scrollToTop(animated: Bool)
-}
-
-protocol ListViewDelegate: AnyObject {
-    func listCollectionView(_ collectionView: ListView, didSelectItemAt index: Int)
-    func listCollectionViewDidReachEnd(_ collectionView: ListView)
-}
-
-final class ListView: UIView {
+final class ListView: UIView, ListViewConfigurable {
     // MARK: - Properties
 
     weak var delegate: ListViewDelegate?
-    private var items: [ItemResponse] = [] {
-        didSet {
-            guard !items.isEmpty else {
-                return
-            }
+    weak var dataSource: ListViewDataSource?
+    private var cachedItemCount: Int = 0
 
-            collectionView.hideEmptyState()
-        }
+    /// Triggers pagination when there are 3 items left until the end.
+    private var paginationThreshold: Int {
+        3
     }
 
     // MARK: - UI Components
@@ -71,55 +74,11 @@ final class ListView: UIView {
     required init?(coder: NSCoder) {
         nil
     }
-}
 
-// MARK: - ListViewProtocol
+    // MARK: - Private Methods
 
-extension ListView: ListViewProtocol {
-    func setItems(_ newItems: [ItemResponse]) {
-        items = newItems
-        collectionView.reloadData()
-    }
-
-    func appendItems(_ newItems: [ItemResponse]) {
-        let startIndex = items.count
-        items.append(contentsOf: newItems)
-
-        let indexPaths = (startIndex..<items.count).map { IndexPath(item: $0, section: 0) }
-        collectionView.performBatchUpdates {
-            collectionView.insertItems(at: indexPaths)
-        }
-    }
-
-    func showLoading() {
-        loadingIndicator.startAnimating()
-        collectionView.isHidden = true
-    }
-
-    func hideLoading() {
-        loadingIndicator.stopAnimating()
-        collectionView.isHidden = false
-    }
-
-    func showEmptyState(with displayModel: EmptyStateViewDisplayModel) {
-        collectionView.showEmptyState(with: displayModel)
-    }
-
-    func clear() {
-        items.removeAll()
-        collectionView.reloadData()
-    }
-
-    func scrollToTop(animated: Bool) {
-        guard !items.isEmpty else {
-            return
-        }
-
-        collectionView.scrollToItem(
-            at: IndexPath(item: 0, section: 0),
-            at: .top,
-            animated: animated
-        )
+    private func shouldTriggerPagination(for indexPath: IndexPath) -> Bool {
+        indexPath.item >= (cachedItemCount - paginationThreshold)
     }
 }
 
@@ -131,6 +90,7 @@ extension ListView: ViewCoding {
 
         collectionView.delegate = self
         collectionView.dataSource = self
+        collectionView.prefetchDataSource = self
         collectionView.register(
             ListCollectionViewCell.self,
             forCellWithReuseIdentifier: ListCollectionViewCell.reuseIdentifier
@@ -154,11 +114,88 @@ extension ListView: ViewCoding {
     }
 }
 
+// MARK: - Loadable Protocol
+
+extension ListView: Loadable {
+    func showLoading() {
+        loadingIndicator.startAnimating()
+        collectionView.isHidden = true
+    }
+
+    func hideLoading() {
+        loadingIndicator.stopAnimating()
+        collectionView.isHidden = false
+    }
+}
+
+// MARK: - FeedbackViewShowable Protocol
+
+extension ListView: FeedbackViewShowable {
+    func showEmptyState(with displayModel: FeedbackViewDisplayModel) {
+        collectionView.showEmptyState(with: displayModel)
+    }
+
+    func hideEmptyState() {
+        collectionView.hideEmptyState()
+    }
+}
+
+// MARK: - ScrollableToTop Protocol
+
+extension ListView: ScrollableToTop {
+    func scrollToTop(animated: Bool) {
+        guard cachedItemCount > 0 else {
+            return
+        }
+
+        collectionView.scrollToItem(
+            at: IndexPath(item: 0, section: 0),
+            at: .top,
+            animated: animated
+        )
+    }
+}
+
+// MARK: - ListDataRenderable Protocol
+
+extension ListView: ListDataRenderable {
+    func renderItems(_ items: [ListItemDisplayModel]) {
+        cachedItemCount = items.count
+        collectionView.reloadData()
+
+        if !items.isEmpty {
+            hideEmptyState()
+        }
+    }
+
+    func appendItems(_ items: [ListItemDisplayModel]) {
+        let startIndex = cachedItemCount
+        cachedItemCount += items.count
+
+        let indexPaths = (startIndex..<cachedItemCount).map {
+            IndexPath(item: $0, section: 0)
+        }
+
+        collectionView.performBatchUpdates {
+            collectionView.insertItems(at: indexPaths)
+        } completion: { [weak self] finished in
+            if !finished {
+                self?.collectionView.reloadData()
+            }
+        }
+    }
+
+    func clearItems() {
+        cachedItemCount = 0
+        collectionView.reloadData()
+    }
+}
+
 // MARK: - UICollectionViewDelegate
 
 extension ListView: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        delegate?.listCollectionView(self, didSelectItemAt: indexPath.item)
+        delegate?.listViewDidSelectItem(at: indexPath.item)
     }
 
     func collectionView(
@@ -166,11 +203,11 @@ extension ListView: UICollectionViewDelegate {
         willDisplay cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard indexPath.item >= (items.count - 3) else {
+        guard shouldTriggerPagination(for: indexPath) else {
             return
         }
 
-        delegate?.listCollectionViewDidReachEnd(self)
+        delegate?.listViewDidReachEnd()
     }
 }
 
@@ -178,7 +215,7 @@ extension ListView: UICollectionViewDelegate {
 
 extension ListView: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        items.count
+        cachedItemCount
     }
 
     func collectionView(
@@ -192,9 +229,28 @@ extension ListView: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
 
-        let item = items[indexPath.item]
-        cell.configure(title: item.title, price: item.priceFormatted, imageURL: item.thumbnail)
+        if let item = dataSource?.item(at: indexPath.item) {
+            cell.configure(displayModel: item)
+        }
 
         return cell
+    }
+}
+
+// MARK: - UICollectionViewDataSourcePrefetching
+
+extension ListView: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        for indexPath in indexPaths {
+            if shouldTriggerPagination(for: indexPath) {
+                delegate?.listViewDidReachEnd()
+                break
+            }
+        }
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        // Pode ser usado para cancelar downloads de imagens se necessário
+        // FIXME:
     }
 }

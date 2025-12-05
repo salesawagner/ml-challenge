@@ -48,19 +48,35 @@ extension APIClient: APIClientProtocol {
             return try responseParser.parse(request, data: data, urlResponse: response)
 
         } catch APIError.badUrl {
-            Logger.log(title: "❌ Bad URL", message: "Request: \(request.toJSON)", type: .error)
+            Logger.log(
+                title: "🌐 Send Network Error APIError.badUrl",
+                message: "Request: \(request.toJSON)",
+                type: .error
+            )
             throw APIError.badUrl
 
         } catch let urlError as URLError {
-            Logger.log(title: "🌐 Network Error", message: "\(urlError.localizedDescription)", type: .error)
+            Logger.log(
+                title: "🌐 Send Network Error urlError",
+                message: "urlError: \(urlError.localizedDescription) \n Request: \(request.toJSON)",
+                type: .error
+            )
             throw APIError.networkError(urlError)
 
         } catch let apiError as APIError {
-            Logger.log(title: "📥 Parse Error", message: "\(apiError)", type: .error)
+            Logger.log(
+                title: "🌐 Send Network Error apiError",
+                message: "apiError: \(apiError.localizedDescription) \n Request: \(request.toJSON)",
+                type: .error
+            )
             throw apiError
 
         } catch {
-            Logger.log(title: "❌ Unknown Error", message: "\(error.localizedDescription)", type: .error)
+            Logger.log(
+                title: "🌐 Send Network Error unknown",
+                message: "error: \(error.localizedDescription) \n Request: \(request.toJSON)",
+                type: .error
+            )
             throw APIError.unknown(error: error, statusCode: 0)
         }
     }

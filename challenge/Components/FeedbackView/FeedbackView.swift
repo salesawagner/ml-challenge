@@ -1,23 +1,22 @@
 //
-//  FeedbackView.swift
+//  EmptyStateView.swift
 //  challenge
 //
-//  Created by Wagner Sales on 01/12/25.
+//  Created by Wagner Sales on 03/12/25.
 //
 
 import UIKit
 
-typealias FeedbackViewContent = UIView & FeedbackViewProtocol
-
-protocol FeedbackViewProtocol: AnyObject {
-    var action: (() -> Void)? { get set }
+protocol FeedbackDataRenderable: AnyObject {
     func configure(with displayModel: FeedbackViewDisplayModel)
 }
+
+typealias FeedbackViewContent = UIView & FeedbackDataRenderable
 
 final class FeedbackView: UIView {
     // MARK: - Properties
 
-    var action: (() -> Void)?
+    private var action: (() -> Void)?
 
     // MARK: - UI Components
 
@@ -36,7 +35,6 @@ final class FeedbackView: UIView {
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.tintColor = Colors.withOpacity(Colors.onSurface, opacity: .high)
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.image = UIImage(systemName: "exclamationmark.triangle")
 
         return iconImageView
     }()
@@ -44,6 +42,8 @@ final class FeedbackView: UIView {
     private let titleLabel: UILabel = {
         let titleLabel = Labels.create(style: .title2)
         titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 0
+        titleLabel.textColor = Colors.withOpacity(Colors.onSurface, opacity: .opaque)
 
         return titleLabel
     }()
@@ -51,6 +51,7 @@ final class FeedbackView: UIView {
     private let messageLabel: UILabel = {
         let messageLabel = Labels.create(style: .body)
         messageLabel.textAlignment = .center
+        messageLabel.numberOfLines = 0
         messageLabel.textColor = Colors.withOpacity(Colors.onSurface, opacity: .opaque)
 
         return messageLabel
@@ -84,7 +85,7 @@ final class FeedbackView: UIView {
 
 extension FeedbackView: ViewCoding {
     func configure() {
-        backgroundColor = Colors.background
+        backgroundColor = .clear
         actionButton.addTarget(self, action: #selector(actionButtonTapped), for: .touchUpInside)
     }
 
@@ -100,31 +101,32 @@ extension FeedbackView: ViewCoding {
     func buildConstraints() {
         NSLayoutConstraint.activate([
             containerStackView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            containerStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.large),
-            containerStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.large)
+            containerStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.extraLarge),
+            containerStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.extraLarge)
         ])
 
         NSLayoutConstraint.activate([
-            iconImageView.widthAnchor.constraint(equalToConstant: Sizes.extraLarge),
-            iconImageView.heightAnchor.constraint(equalToConstant: Sizes.extraLarge)
+            iconImageView.widthAnchor.constraint(equalToConstant: Sizes.doubleExtraLarge),
+            iconImageView.heightAnchor.constraint(equalToConstant: Sizes.doubleExtraLarge)
         ])
     }
 }
 
-// MARK: - FeedbackViewProtocol
+// MARK: - EmptyStateViewProtocol
 
-extension FeedbackView: FeedbackViewProtocol {
+extension FeedbackView: FeedbackDataRenderable {
     func configure(with displayModel: FeedbackViewDisplayModel) {
+        iconImageView.image = UIImage(systemName: displayModel.iconName)
         titleLabel.text = displayModel.title
+        messageLabel.text = displayModel.message
+        messageLabel.isHidden = displayModel.message?.isEmpty == true
 
-        if let message = displayModel.message {
-            messageLabel.text = message
-            messageLabel.isHidden = false
+        if let actionButtonTitle = displayModel.actionButtonTitle, let buttonAction = displayModel.action {
+            actionButton.configuration?.title = actionButtonTitle
+            actionButton.isHidden = false
+            action = buttonAction
         } else {
-            messageLabel.isHidden = true
+            actionButton.isHidden = true
         }
-
-        actionButton.configuration?.title = displayModel.actionButtonTitle
-        action = displayModel.action
     }
 }

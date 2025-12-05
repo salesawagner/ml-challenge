@@ -8,8 +8,8 @@
 import UIKit
 
 extension UICollectionView {
-    func showEmptyState(with displayModel: EmptyStateViewDisplayModel) {
-        let emptyStateView = EmptyStateView()
+    func showEmptyState(with displayModel: FeedbackViewDisplayModel) {
+        let emptyStateView = FeedbackView()
         emptyStateView.configure(with: displayModel)
         backgroundView = emptyStateView
     }

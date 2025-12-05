@@ -10,7 +10,7 @@ import Foundation
 enum ListState {
     case idle
     case loading
-    case empty(displayModel: EmptyStateViewDisplayModel)
+    case empty(displayModel: FeedbackViewDisplayModel)
     case success(items: [ItemResponse])
     case paginationSuccess(items: [ItemResponse])
     case failure(displayModel: ErrorViewDisplayModel)
@@ -19,9 +19,46 @@ enum ListState {
     case retry
 }
 
-enum ListOperation {
-    case paginate
-    case filter(query: String)
+enum ListLoadingState: Equatable {
+    case idle
+    case loadingInitial
+    case loadingMore
+    case searching
+
+    var canLoadMore: Bool {
+        self == .idle
+    }
+
+    var canSearch: Bool {
+        self == .idle || self == .loadingMore
+    }
+
+    var isLoading: Bool {
+        self != .idle
+    }
+}
+
+enum ListOperationContext {
+    case initialLoad
+    case search(query: String)
+    case pagination
+
+    var isInitialOrSearch: Bool {
+        switch self {
+        case .initialLoad, .search:
+            return true
+
+        case .pagination:
+            return false
+        }
+    }
+}
+
+enum ListError: LocalizedError {
+    case emptyResults
+    case alreadyLoading
+    case cannotPaginate
+    case invalidState
 }
 
 protocol ListViewModelProtocol {
@@ -41,23 +78,53 @@ final class ListViewModel {
     private let apiClient: APIClientProtocol
     private let paginationManager: ListPaginationManagerProtocol
 
-    private var lastOperation: ListOperation?
-    private var itemsResponse: [ItemResponse] = []
+    private let stateLock = NSLock()
 
-    private var isLoadingMore = false
-    private var isSearching = false
+    private var _itemsResponse: [ItemResponse] = []
+    private var _loadingState: ListLoadingState = .idle
 
-    // MARK: - ListViewModelProtocol Properties
-    var query: String
-    private(set) var state: ListState = .idle {
-        didSet {
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.didChangeState?(self.state)
-            }
+    private var itemsResponse: [ItemResponse] {
+        get {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            return _itemsResponse
+        }
+        set {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            _itemsResponse = newValue
         }
     }
 
+    private var loadingState: ListLoadingState {
+        get {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            return _loadingState
+        }
+        set {
+            stateLock.lock()
+            let oldValue = _loadingState
+            _loadingState = newValue
+            stateLock.unlock()
+
+            Logger.log(
+                title: "ListViewModel.loadingState",
+                message: "Changed: \(oldValue) -> \(newValue)",
+                type: .debug
+            )
+        }
+    }
+
+    private(set) var state: ListState = .idle {
+        didSet {
+            didChangeState?(self.state)
+        }
+    }
+
+    // MARK: - ListViewModelProtocol Properties
+
+    var query: String
     var didChangeState: ((ListState) -> Void)?
 
     // MARK: - Initialization
@@ -84,81 +151,115 @@ final class ListViewModel {
 // MARK: - Operations
 
 extension ListViewModel {
-    private func execute(_ operation: ListOperation) async {
-        lastOperation = operation
+    private func executeOperation(_ context: ListOperationContext) async {
+        guard canExecute(context) else {
+            return
+        }
 
-        switch operation {
-        case .paginate:
-            await performPagination()
+        prepareForOperation(context)
+        await performFetch(context: context)
+    }
 
-        case .filter(let query):
-            await performSearch(query: query)
+    private func canExecute(_ context: ListOperationContext) -> Bool {
+        switch context {
+        case .initialLoad:
+            return true
+
+        case .search:
+            guard loadingState.canSearch else {
+                Logger.log(title: "ListViewModel.canExecute", message: "Cannot search in state: \(loadingState)")
+                return false
+            }
+
+            return true
+
+        case .pagination:
+            guard loadingState.canLoadMore else {
+                Logger.log(title: "ListViewModel.canExecute", message: "Cannot paginate in state: \(loadingState)")
+                return false
+            }
+
+            paginationManager.nextPage()
+            guard paginationManager.canLoadMore else {
+                Logger.log(title: "ListViewModel.canExecute", message: "No more pages to load")
+                return false
+            }
+
+            return true
         }
     }
 
-    private func performPagination() async {
+    private func prepareForOperation(_ context: ListOperationContext) {
+        switch context {
+        case .initialLoad:
+            loadingState = .loadingInitial
+            state = .loading
+
+        case .search(let newQuery):
+            loadingState = .searching
+            state = .loading
+
+            paginationManager.reset()
+            query = newQuery
+
+        case .pagination:
+            loadingState = .loadingMore
+        }
+    }
+}
+
+// MARK: - Data Fetching
+
+extension ListViewModel {
+    private func performFetch(context: ListOperationContext) async {
         defer {
-            isLoadingMore = false
+            loadingState = .idle
         }
 
-        guard !isLoadingMore else {
-            Logger.log(title: "performPagination", message: "Already loading", type: .debug)
-            return
-        }
-
-        paginationManager.nextPage()
-        guard paginationManager.canLoadMore else {
-            return
-        }
-
-        isLoadingMore = true
-        await fetchData()
-    }
-
-    private func performSearch(query: String) async {
-        defer {
-            isSearching = false
-        }
-
-        guard !isSearching else {
-            Logger.log(title: "performSearch", message: "Already searching", type: .debug)
-            return
-        }
-
-        setLoadingState()
-        paginationManager.reset()
-        self.query = query
-
-        await fetchData()
-    }
-
-    private func fetchData() async {
         guard !Task.isCancelled else {
+            Logger.log(title: "ListViewModel.performFetch", message: "Task cancelled before fetch")
             return
         }
 
         do {
             let items = try await requestData()
 
-            handleSuccessfulFetch(items: items)
+            guard !Task.isCancelled else {
+                Logger.log(title: "ListViewModel.performFetch", message: "Task cancelled after fetch")
+                return
+            }
+
+            handleSuccess(items: items, context: context)
 
         } catch let error as APIError {
             guard !Task.isCancelled else {
                 return
             }
 
-            handleApiError(error)
+            handleAPIError(error, context: context)
+
+        } catch let error as ListError {
+            guard !Task.isCancelled else {
+                return
+            }
+
+            if case .emptyResults = error {
+                handleEmptyResults(context: context)
+                return
+            }
+
+            handleGenericError(context: context)
 
         } catch {
             guard !Task.isCancelled else {
                 return
             }
 
-            handleGenericError()
+            handleGenericError(context: context)
         }
     }
 
-    private func requestData() async throws -> ItemsRequest.Response {
+    private func requestData() async throws -> [ItemResponse] {
         let searchRequest = SearchRequest(
             userId: userId,
             offset: paginationManager.offset,
@@ -169,9 +270,9 @@ extension ListViewModel {
         let searchResponse = try await apiClient.send(searchRequest)
         paginationManager.updateTotal(searchResponse.paging.total)
 
-        if searchResponse.results.isEmpty {
-            Logger.log(title: "Result Vazio", message: searchRequest.toJSON, type: .info)
-            throw APIError.empty
+        guard !searchResponse.results.isEmpty else {
+            Logger.log(title: "ListViewModel.requestData", message: "Empty results for query: '\(query)'", type: .info)
+            throw ListError.emptyResults
         }
 
         let itemsRequest = ItemsRequest(itemsId: searchResponse.results)
@@ -179,96 +280,132 @@ extension ListViewModel {
     }
 }
 
-// MARK: - Handlers
+// MARK: - Success Handlers
 
 extension ListViewModel {
-    private func handleSuccessfulFetch(items: [ItemResponse]) {
+    private func handleSuccess(items: [ItemResponse], context: ListOperationContext) {
         guard !items.isEmpty else {
-            handleEmptyState()
+            handleEmptyResults(context: context)
             return
         }
 
-        guard let lastOperation else {
-            handleGenericError()
-            return
-        }
-
-        switch lastOperation {
-        case .filter:
+        switch context {
+        case .initialLoad, .search:
             itemsResponse = items
             state = .success(items: items)
 
-        case .paginate:
-            itemsResponse.append(contentsOf: items)
+        case .pagination:
+            var currentItems = itemsResponse
+            currentItems.append(contentsOf: items)
+            itemsResponse = currentItems
             state = .paginationSuccess(items: items)
         }
+
+        Logger.log(
+            title: "ListViewModel.handleSuccess",
+            message: "Loaded \(items.count) items. Total: \(itemsResponse.count)",
+            type: .info
+        )
     }
 
-    private func handleApiError(_ error: APIError) {
-        if error.isAuthenticationError {
-            state = .unauthorized
-            return
-        }
+    private func handleEmptyResults(context: ListOperationContext) {
+        switch context {
+        case .initialLoad, .search:
+            let displayModel = createEmptyStateDisplayModel()
+            state = .empty(displayModel: displayModel)
 
-        if case .empty = error {
-            handleSuccessfulFetch(items: [])
-        } else {
-            handleGenericError()
+        case .pagination:
+            Logger.log(title: "ListViewModel.handleEmptyResults", message: "No more items to paginate")
         }
     }
 
-    private func handleEmptyState() {
+    private func createEmptyStateDisplayModel() -> FeedbackViewDisplayModel {
         let message: String
         if !query.isEmpty {
-            message = "Não encontramos resultados para \(query)"
+            message = "Não encontramos resultados para '\(query)'"
         } else {
             message = "Não encontramos resultados"
         }
 
-        state = .empty(displayModel: EmptyStateViewDisplayModel(
+        return FeedbackViewDisplayModel(
             iconName: "magnifyingglass",
             title: "Nenhum resultado",
             message: message,
-            actionButtonTitle: "limpar busca",
+            actionButtonTitle: "Limpar busca",
             action: { [weak self] in
-                guard let self = self else { return }
-                self.state = .refresh
+                self?.state = .refresh
             }
-        ))
+        )
+    }
+}
+
+// MARK: - Error Handlers
+
+extension ListViewModel {
+    private func handleAPIError(_ error: APIError, context: ListOperationContext) {
+        Logger.log(
+            title: "ListViewModel.handleAPIError",
+            message: "Error: \(error), Context: \(context)",
+            type: .error
+        )
+
+        if error.isAuthenticationError {
+            handleUnauthorized()
+            return
+        }
+
+        handleGenericError(context: context)
     }
 
-    private func handleGenericError() {
-        Logger.log(title: "handleGenericError", message: "Erro Generico", type: .error)
+    private func handleUnauthorized() {
+        Logger.log(
+            title: "ListViewModel.handleUnauthorized",
+            message: "Authentication error - clearing data",
+            type: .error
+        )
 
-        state = .failure(displayModel: ErrorViewDisplayModel(
-            title: "Não foi possível carregar", // FIXME: Colocar no viewmodel
-            message: "Tivemos um problema ao carregar o conteúdo. Tente novamente.",
+        itemsResponse = []
+        state = .unauthorized
+    }
+
+    private func handleGenericError(context: ListOperationContext) {
+        Logger.log(
+            title: "ListViewModel.handleGenericError",
+            message: "Generic error for context: \(context)",
+            type: .error
+        )
+
+        let displayModel = createErrorDisplayModel(context: context)
+        state = .failure(displayModel: displayModel)
+    }
+
+    private func createErrorDisplayModel(context: ListOperationContext) -> ErrorViewDisplayModel {
+        let title: String
+        let message: String
+
+        switch context {
+        case .initialLoad:
+            title = "Não foi possível carregar"
+            message = "Tivemos um problema ao carregar os produtos. Tente novamente."
+
+        case .search:
+            title = "Erro na busca"
+            message = "Não foi possível realizar a busca. Tente novamente."
+
+        case .pagination:
+            title = "Erro ao carregar mais"
+            message = "Não foi possível carregar mais produtos. Tente novamente."
+        }
+
+        return ErrorViewDisplayModel(
+            title: title,
+            message: message,
             iconName: "arrow.clockwise.circle",
             primaryButtonTitle: "Recarregar",
             primaryAction: { [weak self] in
                 self?.state = .retry
             }
-        ))
-    }
-
-    private func retryAction() -> () -> Void {
-        { [weak self] in
-            guard let self = self else {
-                return
-            }
-
-            Task {
-                await self.retryLastOperation()
-            }
-        }
-    }
-
-    private func retryLastOperation() async {
-        guard let lastOperation else {
-             return
-        }
-
-        await execute(lastOperation)
+        )
     }
 }
 
@@ -276,23 +413,46 @@ extension ListViewModel {
 
 extension ListViewModel: ListViewModelProtocol {
     func viewDidLoad() async {
-        await execute(.filter(query: query))
+        await executeOperation(.initialLoad)
     }
 
     func paginate() async {
-        await execute(.paginate)
+        await executeOperation(.pagination)
     }
 
     func filter(query: String) async {
         guard query != self.query else {
+            Logger.log(title: "ListViewModel.filter", message: "Query unchanged, skipping: '\(query)'")
+
             return
         }
 
-        Logger.log(title: "updateSearchResults", message: "query: \(query)<-- \n self.query: \(self.query)", type: .fault)
-        await execute(.filter(query: query))
+        await executeOperation(.search(query: query))
     }
 
     func getItem(at index: Int) -> ItemResponse? {
         itemsResponse.indices.contains(index) ? itemsResponse[index] : nil
     }
 }
+
+// MARK: - Debug Helpers
+
+#if DEBUG
+extension ListViewModel {
+    var debugDescription: String {
+        """
+        ListViewModel Debug:
+        - userId: \(userId)
+        - query: '\(query)'
+        - loadingState: \(loadingState)
+        - itemsCount: \(itemsResponse.count)
+        - pagination: offset=\(paginationManager.offset), total=\(paginationManager.total)
+        """
+    }
+
+    /// Forces a specific state (for testing purposes only)
+    func forceState(_ state: ListState) {
+        self.state = state
+    }
+}
+#endif

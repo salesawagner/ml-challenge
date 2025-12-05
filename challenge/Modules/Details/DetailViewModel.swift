@@ -5,18 +5,23 @@
 //  Created by Wagner Sales on 01/12/25.
 //
 
-enum DetailState {
+enum DetailContentState {
     case idle
     case displayingItem(item: ItemResponse)
+}
+
+enum DetailDescriptionState {
+    case idle
     case loading
     case success(description: ItemDescriptionResponse)
-    case failure
     case descriptionError(displayModel: FeedbackViewDisplayModel)
     case unauthorized
+    case retry
 }
 
 protocol DetailViewModelProtocol {
-    var didChangeState: ((DetailState) -> Void)? { get set }
+    var didChangeContentState: ((DetailContentState) -> Void)? { get set }
+    var didChangeDescriptionState: ((DetailDescriptionState) -> Void)? { get set }
 
     func viewDidLoad() async
     func fetchDescription() async
@@ -28,15 +33,22 @@ final class DetailViewModel {
     private let itemResponse: ItemResponse
     private let apiClient: APIClientProtocol
 
-    // MARK: - DetailViewModelProtocol Properties
-
-    private(set) var state: DetailState = .idle {
+    private(set) var contentState: DetailContentState = .idle {
         didSet {
-            didChangeState?(state)
+            didChangeContentState?(contentState)
         }
     }
 
-    var didChangeState: ((DetailState) -> Void)?
+    private(set) var descriptionState: DetailDescriptionState = .idle {
+        didSet {
+            didChangeDescriptionState?(descriptionState)
+        }
+    }
+
+    // MARK: - DetailViewModelProtocol Properties
+
+    var didChangeContentState: ((DetailContentState) -> Void)?
+    var didChangeDescriptionState: ((DetailDescriptionState) -> Void)?
 
     // MARK: - Initialization
 
@@ -48,11 +60,11 @@ final class DetailViewModel {
     // MARK: - Private Methods
 
     private func performFetchDescription() async {
-        state = .loading
+        descriptionState = .loading
 
         do {
             let description = try await requestData()
-            state = .success(description: description)
+            descriptionState = .success(description: description)
         } catch let error as APIError {
             handleApiError(error)
         } catch {
@@ -75,7 +87,7 @@ extension DetailViewModel {
             return
         }
 
-        state = .unauthorized
+        descriptionState = .unauthorized
     }
 
     private func handleGenericError() {
@@ -84,13 +96,11 @@ extension DetailViewModel {
             message: "Não foi possível carregar a descrição do produto",
             actionButtonTitle: "Tentar novamente",
             action: { [weak self] in
-                Task {
-                    await self?.fetchDescription()
-                }
+                self?.descriptionState = .retry
             }
         )
 
-        state = .descriptionError(displayModel: displayModel)
+        descriptionState = .descriptionError(displayModel: displayModel)
     }
 }
 
@@ -98,7 +108,7 @@ extension DetailViewModel {
 
 extension DetailViewModel: DetailViewModelProtocol {
     func viewDidLoad() async {
-        state = .displayingItem(item: itemResponse)
+        contentState = .displayingItem(item: itemResponse)
 
         await fetchDescription()
     }

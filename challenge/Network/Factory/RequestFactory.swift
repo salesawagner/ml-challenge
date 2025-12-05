@@ -42,13 +42,16 @@ final class RequestFactory: RequestFactoryProtocol {
                 urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
             }
 
-            Logger.log(title: "📤 API Request: \(request.toJSON)", message: urlRequest.cURL(pretty: true), type: .debug)
+            Logger.log(
+                title: "📤 API Request: \(request.resourceName)",
+                message: urlRequest.cURL(pretty: true)
+            )
             return urlRequest
 
         } catch {
             Logger.log(
-                title: "❌ API Build Error",
-                message: "Request: \(request.toJSON), Error: \(error.localizedDescription)",
+                title: "📤 API Request: \(request.resourceName)",
+                message: "Request: \(request.toJSON), \n Error: \(error.localizedDescription)",
                 type: .error
             )
 

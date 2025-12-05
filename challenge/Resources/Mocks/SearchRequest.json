@@ -54,9 +54,9 @@
         "MLB5988084746"
     ],
     "paging": {
-        "limit": 50,
+        "limit": 20,
         "offset": 0,
-        "total": 118
+        "total": 20
     },
     "query": null,
     "orders": [
