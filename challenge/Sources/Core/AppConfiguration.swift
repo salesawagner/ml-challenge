@@ -58,7 +58,7 @@ extension AppConfiguration {
         let message = """
         \tClient ID: \(clientId)
         \tClient Secret: \(clientSecret.prefix(10))***
-        \tRefresh Token: \(refreshToken.prefix(10))***
+        \tRefresh Token: \(refreshToken)
         \tRedirect URI: \(redirectURI)
         \tAPI Base URL: \(apiBaseURL)
         \tBundle Identifier: \(bundleIdentifier)
