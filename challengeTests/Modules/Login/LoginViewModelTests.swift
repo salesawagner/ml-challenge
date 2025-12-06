@@ -57,7 +57,7 @@ final class LoginViewModelTests: XCTestCase {
             if case .loading = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasLoadingState, "should emit loading state")
+        XCTAssertTrue(hasLoadingState, "expects loading state")
     }
 
     func test_fetchLogin_whenSuccessful_shouldReturnSuccess() async {
@@ -81,7 +81,7 @@ final class LoginViewModelTests: XCTestCase {
             }
             return false
         })
-        XCTAssertTrue(hasSuccessState, "should emit success with correct userId")
+        XCTAssertTrue(hasSuccessState, "expects success with correct userId")
     }
 
     func test_fetchLogin_whenSuccessful_shouldSaveToken() async {
@@ -94,7 +94,7 @@ final class LoginViewModelTests: XCTestCase {
         await sut.fetchLogin()
 
         // Then
-        XCTAssertTrue(mockTokenManager.contains(.saveToken), "should save token")
+        XCTAssertTrue(mockTokenManager.contains(.saveToken), "ensures save token")
         XCTAssertEqual(mockTokenManager.savedToken?.userId, mockToken.userId, "should save correct token")
     }
 
@@ -115,7 +115,7 @@ final class LoginViewModelTests: XCTestCase {
             if case .failure = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasFailureState, "should emit failure when no refresh token")
+        XCTAssertTrue(hasFailureState, "expects failure when no refresh token")
     }
 
     func test_fetchLogin_whenNetworkError_shouldReturnFailure() async {
@@ -136,7 +136,7 @@ final class LoginViewModelTests: XCTestCase {
             if case .failure = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasFailureState, "should emit failure on network error")
+        XCTAssertTrue(hasFailureState, "expects failure on network error")
     }
 
     func test_fetchLogin_whenInvalidGrant_shouldReturnFailure() async {
@@ -157,7 +157,7 @@ final class LoginViewModelTests: XCTestCase {
             if case .failure = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasFailureState, "should emit failure on invalid_grant")
+        XCTAssertTrue(hasFailureState, "expects failure on invalid_grant")
     }
 
     func test_fetchLogin_whenTokenSaveFails_shouldStillReturnSuccess() async {
@@ -182,7 +182,7 @@ final class LoginViewModelTests: XCTestCase {
             if case .success = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasSuccessState, "should emit success even if save fails")
+        XCTAssertTrue(hasSuccessState, "expects success even if save fails")
     }
 
     // MARK: - State Transitions Tests
@@ -373,7 +373,7 @@ final class LoginViewModelTests: XCTestCase {
         await sut.fetchLogin()
 
         // Then
-        XCTAssertGreaterThan(stateCount, 1, "should emit multiple states (loading → success)")
+        XCTAssertGreaterThan(stateCount, 1, "expects multiple states (loading → success)")
     }
 
     // MARK: - Edge Cases
@@ -505,8 +505,8 @@ final class LoginViewModelTests: XCTestCase {
         mockAPIClient.sendResult = .failure(.networkError(URLError(.notConnectedToInternet)))
         await sut.fetchLogin()
 
-        XCTAssertTrue(stateChanges.contains("loading"), "should have loading")
-        XCTAssertTrue(stateChanges.contains("failure"), "should have failure")
+        XCTAssertTrue(stateChanges.contains("loading"), "ensures have loading")
+        XCTAssertTrue(stateChanges.contains("failure"), "ensures have failure")
 
         // When - Retry with success
         stateChanges.removeAll()

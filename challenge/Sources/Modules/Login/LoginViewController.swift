@@ -10,8 +10,8 @@ import UIKit
 final class LoginViewController: UIViewController {
     // MARK: - Properties
 
-    private var viewModel: LoginViewModelProtocol
-    private let contentView: LoginViewContent
+    var viewModel: LoginViewModelProtocol
+    let contentView: LoginViewContent
     private var currentTask: Task<Void, Never>?
 
     // MARK: - Initialization

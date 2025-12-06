@@ -67,7 +67,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .displayingItem = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasDisplayingItem, "should emit displayingItem")
+        XCTAssertTrue(hasDisplayingItem, "ensures displayingItem")
     }
 
     func test_viewDidLoad_whenCalled_shouldStartFetchingDescription() async {
@@ -87,7 +87,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .loading = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasLoadingState, "should emit loading for description")
+        XCTAssertTrue(hasLoadingState, "expects loading for description")
     }
 
     func test_viewDidLoad_whenDescriptionSuccess_shouldEmitSuccess() async {
@@ -110,7 +110,7 @@ final class DetailViewModelTests: XCTestCase {
             }
             return false
         })
-        XCTAssertTrue(hasSuccessState, "should emit success with description")
+        XCTAssertTrue(hasSuccessState, "expects success with description")
     }
 
     func test_viewDidLoad_whenDescriptionFails_shouldEmitError() async {
@@ -130,7 +130,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .descriptionError = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasErrorState, "should emit descriptionError on failure")
+        XCTAssertTrue(hasErrorState, "expects descriptionError on failure")
     }
 
     // MARK: - fetchDescription Tests
@@ -153,7 +153,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .success = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasSuccessState, "should emit success")
+        XCTAssertTrue(hasSuccessState, "expects success")
         XCTAssertTrue(mockAPIClient.contains(.send), "should make request")
     }
 
@@ -174,7 +174,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .unauthorized = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasUnauthorizedState, "should emit unauthorized on 401 error")
+        XCTAssertTrue(hasUnauthorizedState, "expects unauthorized on 401 error")
     }
 
     func test_fetchDescription_whenNetworkError_shouldEmitError() async {
@@ -194,7 +194,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .descriptionError = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasErrorState, "should emit descriptionError")
+        XCTAssertTrue(hasErrorState, "expects descriptionError")
     }
 
     func test_fetchDescription_whenLoading_shouldEmitLoadingState() async {
@@ -214,7 +214,7 @@ final class DetailViewModelTests: XCTestCase {
             if case .loading = $0 { return true }
             return false
         })
-        XCTAssertTrue(hasLoadingState, "should emit loading before result")
+        XCTAssertTrue(hasLoadingState, "expects loading before result")
     }
 
     // MARK: - State Transitions Tests
@@ -277,7 +277,7 @@ final class DetailViewModelTests: XCTestCase {
         }
 
         // Then
-        XCTAssertTrue(retryTriggered, "should emit retry state")
+        XCTAssertTrue(retryTriggered, "expects retry state")
     }
 
     // MARK: - Error Handling Tests

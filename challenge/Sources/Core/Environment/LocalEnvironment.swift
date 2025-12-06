@@ -8,6 +8,6 @@
 import Foundation
 
 struct LocalEnvironment: Environment {
-    let domainURL: URL? = nil
-    let type: APIEnvironmentType = .local
+    var domainURL: URL?
+    var type: APIEnvironmentType = .local
 }

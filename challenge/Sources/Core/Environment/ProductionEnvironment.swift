@@ -8,6 +8,6 @@
 import Foundation
 
 struct ProductionEnvironment: Environment {
-    let domainURL: URL? = URL(string: AppConfiguration.apiBaseURL)
-    let type: APIEnvironmentType = .production
+    var domainURL: URL? = URL(string: AppConfiguration.apiBaseURL)
+    var type: APIEnvironmentType = .production
 }

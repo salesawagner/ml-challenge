@@ -47,7 +47,7 @@ final class LoginView: UIView {
     // MARK: - Private Methods
 
     @objc
-    private func actionButtonTapped() {
+    func actionButtonTapped() {
         delegate?.actionButtonTapped()
     }
 }

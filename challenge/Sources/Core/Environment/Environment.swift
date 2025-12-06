@@ -8,6 +8,6 @@
 import Foundation
 
 protocol Environment {
-    var domainURL: URL? { get }
-    var type: APIEnvironmentType { get }
+    var domainURL: URL? { get set }
+    var type: APIEnvironmentType { get set }
 }

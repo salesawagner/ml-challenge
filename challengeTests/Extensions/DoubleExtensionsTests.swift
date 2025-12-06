@@ -19,7 +19,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertEqual(result, "R$ 0,00", "should format zero correctly")
+        XCTAssertEqual(result, "R$ 0,00", "verifies format zero correctly")
     }
 
     func test_toCurrency_whenPositiveInteger_shouldReturnFormattedValue() {
@@ -30,7 +30,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertEqual(result, "R$ 100,00", "should format positive integer")
+        XCTAssertEqual(result, "R$ 100,00", "verifies format positive integer")
     }
 
     func test_toCurrency_whenPositiveDecimal_shouldReturnFormattedValue() {
@@ -41,7 +41,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertEqual(result, "R$ 99,99", "should format positive decimal")
+        XCTAssertEqual(result, "R$ 99,99", "verifies format positive decimal")
     }
 
     func test_toCurrency_whenLargeNumber_shouldReturnFormattedValue() {
@@ -52,8 +52,8 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertTrue(result.contains("R$"), "should contain R$ symbol")
-        XCTAssertTrue(result.contains("1.234.567,89") || result.contains("1234567,89"), "should format large number")
+        XCTAssertTrue(result.contains("R$"), "verifies contain R$ symbol")
+        XCTAssertTrue(result.contains("1.234.567,89") || result.contains("1234567,89"), "verifies format large number")
     }
 
     func test_toCurrency_whenOneDecimalPlace_shouldRoundToTwoDecimals() {
@@ -64,7 +64,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertEqual(result, "R$ 10,50", "should pad with trailing zeros")
+        XCTAssertEqual(result, "R$ 10,50", "verifies pad with trailing zeros")
     }
 
     func test_toCurrency_whenThreeDecimalPlaces_shouldRoundToTwoDecimals() {
@@ -75,7 +75,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertTrue(result == "R$ 10,55" || result == "R$ 10,56", "should round to 2 decimal places")
+        XCTAssertTrue(result == "R$ 10,55" || result == "R$ 10,56", "verifies round to 2 decimal places")
     }
 
     func test_toCurrency_whenNegativeValue_shouldReturnFormattedNegative() {
@@ -134,7 +134,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result = value.toCurrency
 
         // Then
-        XCTAssertTrue(result == "R$ 10,99" || result == "R$ 11,00", "should round correctly")
+        XCTAssertTrue(result == "R$ 10,99" || result == "R$ 11,00", "ensures round correctly")
     }
 
     func test_toCurrency_whenMultipleConversions_shouldBeConsistent() {
@@ -147,7 +147,7 @@ final class DoubleExtensionsTests: XCTestCase {
         let result3 = value.toCurrency
 
         // Then
-        XCTAssertEqual(result1, result2, "conversions should be consistent")
-        XCTAssertEqual(result2, result3, "conversions should be consistent")
+        XCTAssertEqual(result1, result2)
+        XCTAssertEqual(result2, result3)
     }
 }
