@@ -16,13 +16,15 @@ protocol Spyable {
 open class Spy<Message: Equatable>: Spyable {
     private(set) var receivedMessages: [Message] = []
 
-    private init() {}
-
     func record(_ message: Message) {
         receivedMessages.append(message)
     }
 
     func contains(_ message: Message) -> Bool {
         return receivedMessages.contains(message)
+    }
+
+    func removeAllMessages() {
+        receivedMessages.removeAll()
     }
 }
